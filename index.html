@@ -1,0 +1,888 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#172554">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Worker Salary">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<title>Worker Salary Management</title>
+
+<style>
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #f1f5f9;
+    color: #172554;
+}
+
+header {
+    background: linear-gradient(135deg,#172554,#2563eb);
+    color: white;
+    text-align: center;
+    padding: 28px 15px;
+}
+
+main {
+    max-width: 750px;
+    margin: auto;
+    padding: 15px;
+}
+
+.card {
+    background: white;
+    padding: 22px;
+    margin: 18px 0;
+    border-radius: 16px;
+    box-shadow: 0 4px 15px #00000010;
+}
+
+input {
+    width: 100%;
+    padding: 13px;
+    margin: 8px 0 14px;
+    border: 1px solid #cbd5e1;
+    border-radius: 9px;
+    font-size: 15px;
+}
+
+button {
+    background: linear-gradient(145deg,#3b82f6,#1d4ed8);
+    color: white;
+    border: none;
+    padding: 13px 18px;
+    margin: 5px 3px 8px 0;
+    border-radius: 11px;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 5px 0 #153e9f, 0 8px 14px #00000020;
+    transition: .15s;
+}
+
+button:hover { transform: translateY(-2px); }
+
+button:active {
+    transform: translateY(4px);
+    box-shadow: 0 1px 0 #153e9f;
+}
+
+.danger { background: linear-gradient(145deg,#ef4444,#b91c1c); }
+.danger { box-shadow: 0 5px 0 #991b1b; }
+
+.secondary { background: linear-gradient(145deg,#64748b,#475569); }
+.secondary { box-shadow: 0 5px 0 #334155; }
+
+.success { background: linear-gradient(145deg,#22a06b,#15803d); }
+.success { box-shadow: 0 5px 0 #166534; }
+
+.worker-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 0;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.worker-actions { flex-shrink: 0; }
+
+.attendance-row {
+    display: flex;
+    align-items: center;
+    padding: 12px 5px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.attendance-row input {
+    width: 22px;
+    height: 22px;
+    margin: 0 12px 0 0;
+}
+.attendance-tools { margin: 8px 0 12px; }
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+th, td {
+    padding: 11px 6px;
+    border-bottom: 1px solid #e2e8f0;
+    text-align: left;
+    font-size: 14px;
+}
+
+th { background: #eff6ff; }
+
+.total {
+    font-size: 19px;
+    font-weight: bold;
+    color: #15803d;
+    margin-top: 20px;
+}
+
+.message {
+    color: #15803d;
+    font-weight: bold;
+    margin-top: 12px;
+}
+
+footer {
+    text-align: center;
+    padding: 25px;
+    color: #8492a6;
+    font-size: 13px;
+}
+
+/* Attendance report */
+.report-wrap { overflow-x: auto; margin-top: 18px; }
+.report-heading { text-align: center; margin: 10px 0 18px; color: #172554; }
+.report-heading h2 { margin-bottom: 6px; }
+.report-summary { display: flex; flex-wrap: wrap; gap: 10px; margin: 14px 0; }
+.report-summary div { flex: 1; min-width: 135px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 9px; padding: 10px; }
+.report-summary strong { display: block; font-size: 18px; margin-top: 4px; }
+.attendance-report { min-width: 760px; width: 100%; border-collapse: collapse; }
+.attendance-report th, .attendance-report td { border: 1px solid #94a3b8; padding: 8px 6px; text-align: center; white-space: nowrap; }
+.attendance-report th { background: #1e3a5f; color: white; }
+.attendance-report th.worker-col, .attendance-report td.worker-col { text-align: left; min-width: 125px; }
+.attendance-report td.present { color: #15803d; font-weight: bold; font-size: 18px; }
+.attendance-report tfoot td { background: #e2e8f0; font-weight: bold; }
+.report-actions { margin-top: 14px; }
+.report-note { color: #64748b; font-size: 12px; margin-top: 10px; }
+
+@page { size: A4 landscape; margin: 8mm; }
+@media print {
+    html, body { width: 100% !important; height: auto !important; min-height: 0 !important; margin: 0 !important; padding: 0 !important; overflow: visible !important; }
+    body { background: #fff !important; }
+    body > header, body > footer { display: none !important; }
+    body > main { display: block !important; width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0 !important; }
+    body > main > section:not(#reportResult) { display: none !important; }
+    #reportResult { display: block !important; position: static !important; width: 100% !important; max-width: none !important; height: auto !important; min-height: 0 !important; margin: 0 !important; padding: 0 !important; overflow: visible !important; page-break-inside: avoid !important; break-inside: avoid-page !important; }
+    #reportResult * { visibility: visible !important; }
+    #reportResult .no-print { display: none !important; }
+    #reportResult .report-wrap { overflow: visible !important; width: 100% !important; }
+    #reportResult .attendance-report { min-width: 0 !important; width: 100% !important; font-size: 8px !important; table-layout: fixed !important; }
+    #reportResult .attendance-report th, #reportResult .attendance-report td { padding: 3px 2px !important; font-size: 8px !important; }
+    #reportResult .report-heading { margin: 0 0 8px !important; }
+    #reportResult .report-heading h2 { font-size: 16px !important; }
+    #reportResult .report-summary { margin: 8px 0 !important; gap: 6px !important; }
+    #reportResult .report-summary div { padding: 5px !important; }
+    #reportResult .report-summary strong { font-size: 12px !important; }
+    #reportResult .report-note { margin-top: 5px !important; font-size: 9px !important; }
+    #reportResult tr, #reportResult .report-summary { break-inside: avoid !important; page-break-inside: avoid !important; }
+}
+
+@media(max-width:480px) {
+    .card { padding: 17px; }
+    .worker-row { flex-wrap: wrap; }
+    button { padding: 12px 14px; }
+}
+</style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+
+<body>
+
+<header>
+    <h1>Worker Management</h1>
+    <p>Attendance & Salary Management System</p>
+</header>
+
+<main>
+
+<section class="card">
+    <h2>Dashboard</h2>
+    <p>Registered Active Workers: <strong id="workerCount">0</strong></p>
+    <p>Daily Salary Per Worker: <strong>Rs. 2,000</strong></p>
+</section>
+
+<section class="card">
+    <h2>Add New Worker</h2>
+    <input type="text" id="workerName" placeholder="Enter worker name">
+    <button onclick="addWorker()">+ Add Worker</button>
+    <div id="workerMessage" class="message"></div>
+</section>
+
+<section class="card">
+    <h2>Registered Workers</h2>
+    <div id="workerList">Loading workers...</div>
+</section>
+
+<section class="card">
+    <h2>Deleted Workers</h2>
+    <div id="deletedList">Loading...</div>
+</section>
+
+<section class="card">
+    <h2>Daily Attendance</h2>
+
+    <label>Select Date:</label>
+    <input type="date" id="attendanceDate">
+
+    <div class="attendance-tools">
+        <button type="button" class="secondary" onclick="setAllAttendance(true)">Select All</button>
+        <button type="button" class="secondary" onclick="setAllAttendance(false)">Clear All</button>
+    </div>
+    <div id="attendanceList">Loading...</div>
+
+    <button class="success" onclick="saveAttendance()">
+        Save Attendance
+    </button>
+
+    <button class="secondary" onclick="undoAttendance()">
+        Undo Last Save
+    </button>
+
+    <div id="attendanceMessage" class="message"></div>
+</section>
+
+<section class="card">
+    <h2>Salary Reports</h2>
+
+    <label>From Date:</label>
+    <input type="date" id="reportStart">
+
+    <label>To Date:</label>
+    <input type="date" id="reportEnd">
+
+    <button onclick="generateReport()">Custom Date Range</button>
+    <button class="success" onclick="generateAttendanceReport('weekly')">Weekly Attendance PDF</button>
+    <button class="secondary" onclick="generateAttendanceReport('monthly')">Monthly Attendance PDF</button>
+    <button class="secondary" onclick="selectCurrentMonth()">This Month</button>
+
+    <div id="reportResult"></div>
+</section>
+
+</main>
+
+<footer>
+    Worker Salary Management System<br>
+    Developed by <strong>Saranga (K.D.S.R)</strong>
+</footer>
+
+<script>
+"use strict";
+
+let db = null;
+let lastAttendanceUndo = null;
+
+function localDateString(date = new Date()) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+}
+
+// Use the EXISTING database and version.
+// Do not delete or recreate existing records.
+const request = indexedDB.open("WorkerSalaryPhoneDB", 2);
+
+request.onupgradeneeded = function(event) {
+    db = event.target.result;
+
+    if (!db.objectStoreNames.contains("workers")) {
+        db.createObjectStore("workers", {
+            keyPath: "id",
+            autoIncrement: true
+        });
+    }
+
+    if (!db.objectStoreNames.contains("attendance")) {
+        db.createObjectStore("attendance", {
+            keyPath: "key"
+        });
+    }
+};
+
+request.onsuccess = function(event) {
+    db = event.target.result;
+
+    document.getElementById("attendanceDate").value =
+        localDateString();
+
+    document.getElementById("attendanceDate").addEventListener(
+        "change", showAttendance
+    );
+
+    showWorkers();
+    showAttendance();
+    showDeletedWorkers();
+};
+
+request.onerror = function() {
+    alert("Database error. Your saved records have not been intentionally deleted.");
+};
+
+function addWorker() {
+    const name = document.getElementById("workerName").value.trim();
+
+    if (!name) {
+        alert("Please enter a worker name.");
+        return;
+    }
+
+    const transaction = db.transaction("workers", "readwrite");
+    const store = transaction.objectStore("workers");
+
+    store.add({
+        name: name,
+        active: true
+    });
+
+    transaction.oncomplete = function() {
+        document.getElementById("workerName").value = "";
+        document.getElementById("workerMessage").textContent =
+            "Worker added successfully!";
+        showWorkers();
+    };
+
+    transaction.onerror = function() {
+        alert("Could not add worker.");
+    };
+}
+
+function showWorkers() {
+    const transaction = db.transaction("workers", "readonly");
+    const request = transaction.objectStore("workers").getAll();
+
+    request.onsuccess = function() {
+        const list = document.getElementById("workerList");
+        list.innerHTML = "";
+
+        const active = request.result.filter(
+            worker => worker.active !== false
+        );
+
+        document.getElementById("workerCount").textContent =
+            active.length;
+
+        active.forEach(worker => {
+            const row = document.createElement("div");
+            row.className = "worker-row";
+
+            const name = document.createElement("strong");
+            name.textContent = worker.id + ". " + worker.name;
+
+            const button = document.createElement("button");
+            button.className = "danger";
+            button.textContent = "Delete";
+
+            button.onclick = function() {
+                deleteWorker(worker.id);
+            };
+
+            const actions = document.createElement("div");
+            actions.className = "worker-actions";
+            actions.appendChild(button);
+
+            row.appendChild(name);
+            row.appendChild(actions);
+            list.appendChild(row);
+        });
+
+        if (active.length === 0) {
+            list.textContent = "No active workers.";
+        }
+    };
+}
+
+function deleteWorker(id) {
+    if (!confirm("Delete this worker from the active list?")) return;
+
+    const transaction = db.transaction("workers", "readwrite");
+    const store = transaction.objectStore("workers");
+    const request = store.get(id);
+
+    request.onsuccess = function() {
+        if (request.result) {
+            const worker = request.result;
+            worker.active = false;
+            store.put(worker);
+        }
+    };
+
+    transaction.oncomplete = function() {
+        showWorkers();
+        showDeletedWorkers();
+        showAttendance();
+    };
+}
+
+function showDeletedWorkers() {
+    const transaction = db.transaction("workers", "readonly");
+    const request = transaction.objectStore("workers").getAll();
+
+    request.onsuccess = function() {
+        const list = document.getElementById("deletedList");
+        list.innerHTML = "";
+
+        const deleted = request.result.filter(
+            worker => worker.active === false
+        );
+
+        deleted.forEach(worker => {
+            const row = document.createElement("div");
+            row.className = "worker-row";
+
+            const name = document.createElement("span");
+            name.textContent = worker.name;
+
+            const button = document.createElement("button");
+            button.className = "success";
+            button.textContent = "Restore";
+
+            button.onclick = function() {
+                restoreWorker(worker.id);
+            };
+
+            row.appendChild(name);
+            row.appendChild(button);
+            list.appendChild(row);
+        });
+
+        if (deleted.length === 0) {
+            list.textContent = "No deleted workers.";
+        }
+    };
+}
+
+function restoreWorker(id) {
+    const transaction = db.transaction("workers", "readwrite");
+    const store = transaction.objectStore("workers");
+    const request = store.get(id);
+
+    request.onsuccess = function() {
+        if (request.result) {
+            const worker = request.result;
+            worker.active = true;
+            store.put(worker);
+        }
+    };
+
+    transaction.oncomplete = function() {
+        showWorkers();
+        showDeletedWorkers();
+        showAttendance();
+    };
+}
+
+function showAttendance() {
+    if (!db) return;
+
+    const date = document.getElementById("attendanceDate").value;
+    if (!date) return;
+
+    const transaction = db.transaction(
+        ["workers", "attendance"], "readonly"
+    );
+
+    const workersRequest =
+        transaction.objectStore("workers").getAll();
+
+    const attendanceRequest =
+        transaction.objectStore("attendance").getAll();
+
+    transaction.oncomplete = function() {
+        const list = document.getElementById("attendanceList");
+        list.innerHTML = "";
+
+        const active = workersRequest.result.filter(
+            worker => worker.active !== false
+        );
+
+        const saved = attendanceRequest.result.filter(
+            record => record.date === date
+        );
+
+        active.forEach(worker => {
+            const record = saved.find(
+                item => item.workerId === worker.id
+            );
+
+            const label = document.createElement("label");
+            label.className = "attendance-row";
+
+            const checkbox = document.createElement("input");
+            checkbox.type = "checkbox";
+            checkbox.className = "attendance-check";
+            checkbox.dataset.id = worker.id;
+            checkbox.checked = Boolean(record);
+
+            const name = document.createElement("span");
+            name.textContent = worker.name;
+
+            label.appendChild(checkbox);
+            label.appendChild(name);
+            list.appendChild(label);
+        });
+
+        if (active.length === 0) {
+            list.textContent = "Add workers first.";
+        }
+    };
+}
+
+function setAllAttendance(checked) {
+    document.querySelectorAll(".attendance-check").forEach(checkbox => {
+        checkbox.checked = checked;
+    });
+}
+
+function saveAttendance() {
+    const date = document.getElementById("attendanceDate").value;
+
+    if (!date) {
+        alert("Please select a date.");
+        return;
+    }
+
+    const transaction = db.transaction(
+        "attendance", "readwrite"
+    );
+
+    const store = transaction.objectStore("attendance");
+    const getAll = store.getAll();
+
+    getAll.onsuccess = function() {
+        const allRecords = getAll.result;
+
+        const previousRecords = allRecords.filter(
+            record => record.date === date
+        );
+
+        lastAttendanceUndo = {
+            date: date,
+            previousRecords: previousRecords
+        };
+
+        allRecords.forEach(record => {
+            if (record.date === date) {
+                store.delete(record.key);
+            }
+        });
+
+        document.querySelectorAll(".attendance-check:checked")
+            .forEach(checkbox => {
+                const workerId = Number(checkbox.dataset.id);
+
+                store.put({
+                    key: workerId + "_" + date,
+                    workerId: workerId,
+                    date: date,
+                    salary: 2000
+                });
+            });
+    };
+
+    transaction.oncomplete = function() {
+        document.getElementById("attendanceMessage").textContent =
+            "Attendance saved successfully!";
+        showAttendance();
+    };
+
+    transaction.onerror = function() {
+        alert("Could not save attendance.");
+    };
+}
+
+function undoAttendance() {
+    if (!lastAttendanceUndo) {
+        alert("No attendance save available to undo in this session.");
+        return;
+    }
+
+    if (!confirm("Restore attendance from before the last save?")) return;
+
+    const undo = lastAttendanceUndo;
+
+    const transaction = db.transaction(
+        "attendance", "readwrite"
+    );
+
+    const store = transaction.objectStore("attendance");
+    const getAll = store.getAll();
+
+    getAll.onsuccess = function() {
+        getAll.result.forEach(record => {
+            if (record.date === undo.date) {
+                store.delete(record.key);
+            }
+        });
+
+        undo.previousRecords.forEach(record => {
+            store.put(record);
+        });
+    };
+
+    transaction.oncomplete = function() {
+        lastAttendanceUndo = null;
+
+        document.getElementById("attendanceDate").value =
+            undo.date;
+
+        document.getElementById("attendanceMessage").textContent =
+            "Previous attendance restored!";
+
+        showAttendance();
+    };
+}
+
+function selectCurrentMonth() {
+    const now = new Date();
+
+    const first = new Date(now.getFullYear(), now.getMonth(), 1);
+    const last = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+    document.getElementById("reportStart").value =
+        localDateString(first);
+
+    document.getElementById("reportEnd").value =
+        localDateString(last);
+
+    generateReport();
+}
+
+function escapeHTML(value) {
+    return String(value).replace(/[&<>"']/g, character => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+    })[character]);
+}
+
+function generateReport() {
+    const start = document.getElementById("reportStart").value;
+    const end = document.getElementById("reportEnd").value;
+    if (!start || !end || start > end) {
+        alert("Please select a valid date range.");
+        return;
+    }
+    buildAttendanceReport(start, end, "Custom Attendance & Salary Report");
+}
+
+function generateAttendanceReport(mode) {
+    const selected = document.getElementById("reportStart").value;
+    const reference = selected ? new Date(selected + "T12:00:00") : new Date();
+    let first;
+    let last;
+
+    if (mode === "weekly") {
+        const day = reference.getDay();
+        const offset = day === 0 ? -6 : 1 - day;
+        first = new Date(reference);
+        first.setDate(reference.getDate() + offset);
+        last = new Date(first);
+        last.setDate(first.getDate() + 6);
+    } else {
+        first = new Date(reference.getFullYear(), reference.getMonth(), 1);
+        last = new Date(reference.getFullYear(), reference.getMonth() + 1, 0);
+    }
+
+    const start = localDateString(first);
+    const end = localDateString(last);
+    document.getElementById("reportStart").value = start;
+    document.getElementById("reportEnd").value = end;
+
+    const title = mode === "weekly"
+        ? "Weekly Attendance & Salary Report"
+        : "Monthly Attendance & Salary Report";
+    buildAttendanceReport(start, end, title);
+}
+
+function buildAttendanceReport(start, end, title) {
+    const transaction = db.transaction(["workers", "attendance"], "readonly");
+    const workersRequest = transaction.objectStore("workers").getAll();
+    const attendanceRequest = transaction.objectStore("attendance").getAll();
+
+    transaction.oncomplete = function() {
+        const workers = workersRequest.result.slice().sort((a, b) =>
+            String(a.name).localeCompare(String(b.name))
+        );
+        const records = attendanceRequest.result.filter(record =>
+            record.date >= start && record.date <= end
+        );
+
+        const dates = [];
+        const cursor = new Date(start + "T12:00:00");
+        const lastDate = new Date(end + "T12:00:00");
+        while (cursor <= lastDate) {
+            dates.push(localDateString(cursor));
+            cursor.setDate(cursor.getDate() + 1);
+        }
+
+        const present = new Set(records.map(record =>
+            record.workerId + "_" + record.date
+        ));
+        const totals = new Map();
+        workers.forEach(worker => totals.set(worker.id, { days: 0, salary: 0 }));
+        const daily = {};
+        dates.forEach(date => daily[date] = 0);
+
+        records.forEach(record => {
+            if (totals.has(record.workerId)) {
+                const total = totals.get(record.workerId);
+                total.days++;
+                total.salary += 2000;
+                daily[record.date] = (daily[record.date] || 0) + 1;
+            }
+        });
+
+        const totalDays = records.filter(record => totals.has(record.workerId)).length;
+        const grandTotal = totalDays * 2000;
+
+        let html = `
+            <div class="report-heading">
+                <h2>${escapeHTML(title)}</h2>
+                <div>Period: ${escapeHTML(start)} to ${escapeHTML(end)}</div>
+                <div>Daily rate per worker: Rs. 2,000</div>
+            </div>
+            <div class="report-summary">
+                <div>Total Workers<strong>${workers.length}</strong></div>
+                <div>Total Attendance<strong>${totalDays} worker-days</strong></div>
+                <div>Total Salary<strong>Rs. ${grandTotal.toLocaleString()}</strong></div>
+            </div>
+            <div class="report-wrap">
+            <table class="attendance-report">
+                <thead><tr>
+                    <th class="worker-col">Worker Name</th>
+                    ${dates.map(date => {
+                        const day = new Date(date + "T12:00:00")
+                            .toLocaleDateString("en-US", { weekday: "short" });
+                        return `<th>${day}<br>${date.slice(8, 10)}</th>`;
+                    }).join("")}
+                    <th>Total Days</th><th>Salary</th>
+                </tr></thead><tbody>
+        `;
+
+        workers.forEach(worker => {
+            const total = totals.get(worker.id);
+            html += `<tr><td class="worker-col">${escapeHTML(worker.name)}</td>`;
+            dates.forEach(date => {
+                const checked = present.has(worker.id + "_" + date);
+                html += `<td class="${checked ? "present" : ""}">${checked ? "✓" : ""}</td>`;
+            });
+            html += `<td>${total.days}</td><td>Rs. ${total.salary.toLocaleString()}</td></tr>`;
+        });
+
+        html += `
+                </tbody><tfoot><tr>
+                    <td class="worker-col">Daily Total</td>
+                    ${dates.map(date => `<td>${daily[date] || ""}</td>`).join("")}
+                    <td>${totalDays}</td><td>Rs. ${grandTotal.toLocaleString()}</td>
+                </tr></tfoot>
+            </table></div>
+            <p class="report-note">✓ = Present. Blank cell = Absent. Daily Total = number of workers present.</p>
+            <div class="report-actions no-print">
+                <button id="downloadPdfButton" onclick="downloadReportPDF()">Download PDF</button>
+            </div>
+            <p class="report-note">Worker Salary Management System · Developed by Saranga (K.D.S.R)</p>
+        `;
+        document.getElementById("reportResult").innerHTML = html;
+    };
+
+    transaction.onerror = function() {
+        alert("Could not generate the report. Your saved records have not been changed.");
+    };
+}
+
+async function downloadReportPDF() {
+    const report = document.querySelector("#reportResult .report-heading");
+    const result = document.getElementById("reportResult");
+    const button = document.getElementById("downloadPdfButton");
+
+    if (!report || !result) {
+        alert("Please generate a report first.");
+        return;
+    }
+    if (typeof html2pdf === "undefined") {
+        alert("PDF downloader could not load. Please connect to the internet and reload the app, then try again.");
+        return;
+    }
+
+    const originalText = button ? button.textContent : "Download PDF";
+    if (button) { button.disabled = true; button.textContent = "Preparing PDF..."; }
+
+    try {
+        const reportElement = result.cloneNode(true);
+        reportElement.querySelectorAll(".no-print").forEach(element => element.remove());
+        reportElement.style.background = "#ffffff";
+        reportElement.style.color = "#172554";
+        reportElement.style.padding = "24px";
+        reportElement.style.width = "1100px";
+        reportElement.style.minWidth = "1100px";
+        reportElement.style.maxWidth = "1100px";
+        reportElement.style.margin = "0";
+        reportElement.style.position = "static";
+        reportElement.style.left = "0";
+        reportElement.style.transform = "none";
+        reportElement.style.boxSizing = "border-box";
+        reportElement.style.overflow = "visible";
+        reportElement.style.background = "#ffffff";
+        reportElement.querySelectorAll(".report-wrap").forEach(element => {
+            element.style.overflow = "visible";
+            element.style.width = "100%";
+        });
+        reportElement.querySelectorAll(".attendance-report").forEach(table => {
+            table.style.width = "100%";
+            table.style.minWidth = "0";
+            table.style.tableLayout = "fixed";
+            table.style.borderCollapse = "collapse";
+        });
+        reportElement.querySelectorAll(".attendance-report th, .attendance-report td").forEach(cell => {
+            cell.style.padding = "3px 2px";
+            cell.style.fontSize = "8px";
+            cell.style.whiteSpace = "normal";
+            cell.style.overflowWrap = "anywhere";
+        });
+
+        const title = reportElement.querySelector(".report-heading h2");
+        const safeTitle = title ? title.textContent.trim().replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "") : "Attendance-Report";
+        const options = {
+            margin: [8, 6, 8, 6],
+            filename: safeTitle + ".pdf",
+            image: { type: "jpeg", quality: 0.98 },
+            html2canvas: {
+                scale: 1.5,
+                useCORS: true,
+                backgroundColor: "#ffffff",
+                windowWidth: 1200,
+                scrollX: 0,
+                scrollY: 0,
+                x: 0,
+                y: 0
+            },
+            jsPDF: { unit: "mm", format: "a4", orientation: "landscape" },
+            pagebreak: { mode: [], avoid: ["tr", ".report-summary"] }
+        };
+        await html2pdf().set(options).from(reportElement).save();
+    } catch (error) {
+        alert("Could not create the PDF. Please try again.");
+        console.error(error);
+    } finally {
+        if (button) { button.disabled = false; button.textContent = originalText; }
+    }
+}
+
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(error => {
+      console.error('Service worker registration failed:', error);
+    });
+  });
+}
+</script>
+</body>
+</html>
